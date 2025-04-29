@@ -16,6 +16,7 @@ export const Photo = styled.img`
   max-height: 167px;
   width: 100%;
   object-fit: cover;
+  cursor: pointer;
 `
 
 export const Title = styled.h3`

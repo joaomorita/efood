@@ -6,17 +6,17 @@ export const HeaderStyle = styled.header`
   background-image: url(${fundo});
   height: 163px;
 
-  align-items: center;
   .container {
     max-width: 1024px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin: 0 auto;
   }
 `
 export const Branding = styled.img`
-  width: 125px;
-  height: 57.5px;
+  width: 130px;
+  height: 60px;
   margin-top: 39px;
 `
 export const LinkRestaurantes = styled.a`
