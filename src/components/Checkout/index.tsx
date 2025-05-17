@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux'
-import { AddCartButton } from '../Cart/style'
+import { AddCartButton, SubmitCartButton } from '../Cart/style'
 import {
   DeliverContainer,
   Field,
@@ -17,6 +17,8 @@ import { RootReducer } from '../../store'
 import { priceFormat } from '../FoodList'
 import { useFormik } from 'formik'
 import * as Yup from 'yup'
+import { usePurchaseMutation } from '../../services/api'
+import { IMaskInput } from 'react-imask'
 
 type Props = {
   checkoutStart?: boolean
@@ -24,7 +26,9 @@ type Props = {
 }
 
 const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
-  const { isPayment, isConfirmed } = useSelector(
+  const [purchase, { isSuccess, data }] = usePurchaseMutation()
+
+  const { isPayment, isConfirmed, pedido } = useSelector(
     (state: RootReducer) => state.cart
   )
   const dispatch = useDispatch()
@@ -39,10 +43,31 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
     dispatch(startCheckout())
   }
   const activePayment = () => {
-    dispatch(payment())
+    if (
+      form.values.remetente &&
+      form.values.endereco &&
+      form.values.cidade &&
+      form.values.cep &&
+      form.values.numero
+    ) {
+      dispatch(payment())
+    } else {
+      alert('Preencha antes os dados obrigatórios!')
+    }
   }
   const activeConfirmed = () => {
-    dispatch(confirmed())
+    if (
+      form.values.cardName &&
+      form.values.cardNumber &&
+      form.values.cvv &&
+      form.values.anoVencimento &&
+      form.values.mesVencimento
+    ) {
+      dispatch(confirmed())
+    } else {
+      alert('Preencha antes os dados obrigatórios!')
+    }
+    console.log(pedido)
   }
 
   const form = useFormik({
@@ -83,7 +108,35 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
       )
     }),
     onSubmit: (values) => {
-      console.log(values)
+      purchase({
+        delivery: {
+          receiver: values.remetente,
+          address: {
+            city: values.cidade,
+            description: values.endereco,
+            number: Number(values.numero),
+            zipCode: values.cep,
+            complement: values.complemento
+          }
+        },
+        payment: {
+          card: {
+            name: values.cardName,
+            number: values.cardNumber,
+            code: Number(values.cvv),
+            expires: {
+              month: Number(values.mesVencimento),
+              year: Number(values.anoVencimento)
+            }
+          }
+        },
+        products: [
+          {
+            id: 1,
+            price: 100
+          }
+        ]
+      })
     }
   })
   const getErroMassage = (campo: string, message?: string) => {
@@ -140,7 +193,8 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
         <div className="CEPNumber">
           <Field>
             <label htmlFor="cep">CEP</label>
-            <input
+            <IMaskInput
+              mask="00.000-000"
               type="text"
               required
               id="cep"
@@ -154,7 +208,7 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
           <Field>
             <label htmlFor="numero">Número</label>
             <input
-              type="text"
+              type="number"
               required
               id="numero"
               name="numero"
@@ -175,9 +229,6 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
             onBlur={form.handleBlur}
             value={form.values.complemento}
           />
-          {/* <small>
-            {getErroMassage('complemento', form.errors.complemento)}
-          </small> */}
         </Field>
         <div className="buttomContainer">
           <AddCartButton type="submit" onClick={activePayment}>
@@ -205,7 +256,8 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
         <div className="fieldContainer">
           <Field>
             <label htmlFor="cardNumber">Número do cartão</label>
-            <input
+            <IMaskInput
+              mask="0000 0000 0000 0000"
               type="text"
               required
               id="cardNumber"
@@ -220,7 +272,8 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
           </Field>
           <Field>
             <label htmlFor="cvv">CVV</label>
-            <input
+            <IMaskInput
+              mask="000"
               type="text"
               required
               id="cvv"
@@ -235,7 +288,8 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
         <div className="fieldContainer">
           <Field>
             <label htmlFor="mesVencimento">Mês de vencimento</label>
-            <input
+            <IMaskInput
+              mask="00"
               type="text"
               required
               id="mesVencimento"
@@ -250,7 +304,8 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
           </Field>
           <Field>
             <label htmlFor="anoVencimento">Ano de vencimento</label>
-            <input
+            <IMaskInput
+              mask="00"
               type="text"
               required
               id="anoVencimento"
@@ -265,16 +320,16 @@ const Checkout = ({ checkoutStart = false, priceTotal = 0 }: Props) => {
           </Field>
         </div>
         <div className="buttomContainer">
-          <AddCartButton type="submit" onClick={activeConfirmed}>
+          <SubmitCartButton type="submit" onClick={activeConfirmed}>
             Finalizar pagamento
-          </AddCartButton>
+          </SubmitCartButton>
           <AddCartButton onClick={backAdress}>
             Voltar para a edição do endereço
           </AddCartButton>
         </div>
       </PaymentContainer>
-      <ConfirmedContainer className={isConfirmed ? 'show' : ''}>
-        <h2>Pedido realizado - ????</h2>
+      <ConfirmedContainer className={isConfirmed && isSuccess ? 'show' : ''}>
+        <h2>Pedido realizado - {data?.orderId} </h2>
         <p>
           Estamos felizes em informar que seu pedido já está em processo de
           preparação e, em breve, será entregue no endereço fornecido.
